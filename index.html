@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🪄 올인원 프롬프트 생성기</title>
+    <style>
+        :root {
+            --primary-color: #1e40af;
+            --primary-hover: #1d4ed8;
+            --bg-color: #f1f5f9;
+            --box-bg: #ffffff;
+            --text-main: #334155;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --input-bg: #ffffff;
+            --chip-bg: #f1f5f9;
+            --result-bg: #f8fafc;
+        }
+
+        html[data-theme="dark"] {
+            --bg-color: #0f172a;
+            --box-bg: #1e293b;
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+            --input-bg: #0f172a;
+            --chip-bg: #334155;
+            --result-bg: #0f172a;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            padding: 30px 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            background-color: var(--box-bg);
+            padding: 32px 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.10);
+            width: 100%;
+            max-width: 720px;
+            border: 1px solid var(--border-color);
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        h2 {
+            color: var(--primary-color);
+            margin: 0;
+            font-size: 23px;
+            transition: color 0.3s;
+        }
+
+        .theme-toggle {
+            background: var(--chip-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            border-radius: 20px;
+            padding: 7px 12px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .theme-toggle:hover { border-color: var(--primary-color); }
+
+        p.description {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin: 0 0 24px;
+            line-height: 1.6;
+        }
+
+        .section-title {
+            font-weight: 700;
+            font-size: 14px;
+            margin: 0 0 10px;
+            color: var(--text-main);
+        }
+
+        /* 직무 선택 그리드 */
+        .role-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            gap: 9px;
+            margin-bottom: 24px;
+        }
+
+        .role-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            padding: 12px 6px;
+            border: 1.5px solid var(--border-color);
+            border-radius: 12px;
+            background: var(--input-bg);
+            color: var(--text-main);
+            font-size: 12.5px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.18s;
+        }
+        .role-btn .emoji { font-size: 22px; line-height: 1; }
+        .role-btn:hover { border-color: var(--primary-color); transform: translateY(-2px); }
+        .role-btn.active {
+            border-color: var(--primary-color);
+            background: var(--primary-color);
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(30, 64, 175, 0.30);
+        }
+
+        .form-group { margin-bottom: 20px; }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        textarea, select, input[type="text"] {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 15px;
+            font-family: inherit;
+            background-color: var(--input-bg);
+            color: var(--text-main);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        textarea { height: 120px; resize: vertical; }
+
+        textarea:focus, select:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.15);
+        }
+
+        select {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 15px center;
+            background-size: 16px;
+            padding-right: 40px;
+        }
+
+        .options-row { display: flex; gap: 15px; margin-bottom: 20px; }
+        .options-row .form-group { flex: 1; margin-bottom: 0; }
+
+        /* 세부 옵션 (접이식) */
+        details.advanced {
+            border: 1px dashed var(--border-color);
+            border-radius: 10px;
+            padding: 0 16px;
+            margin-bottom: 22px;
+        }
+        details.advanced summary {
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            padding: 14px 0;
+            color: var(--text-main);
+            user-select: none;
+        }
+        details.advanced[open] summary { border-bottom: 1px solid var(--border-color); margin-bottom: 16px; }
+        .adv-body { padding-bottom: 16px; }
+
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--chip-bg);
+            padding: 12px 14px;
+            border-radius: 10px;
+            margin-bottom: 4px;
+        }
+        .toggle-row input { width: 18px; height: 18px; cursor: pointer; flex-shrink: 0; }
+        .toggle-row label { margin: 0; font-size: 13.5px; line-height: 1.5; cursor: pointer; }
+        .toggle-row .hint { color: var(--text-muted); font-weight: 400; }
+
+        button.generate-btn {
+            width: 100%;
+            padding: 16px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+        button.generate-btn:hover { background-color: var(--primary-hover); }
+        button.generate-btn:active { transform: translateY(2px); }
+
+        .result-box { margin-top: 28px; display: none; animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .result-box h3 {
+            font-size: 15px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .result-content {
+            background-color: var(--result-bg);
+            padding: 20px;
+            border: 1px solid var(--border-color);
+            border-left: 5px solid var(--primary-color);
+            border-radius: 8px;
+            white-space: pre-wrap;
+            font-size: 14.5px;
+            line-height: 1.7;
+            color: var(--text-main);
+            margin-bottom: 14px;
+        }
+
+        .btn-row { display: flex; gap: 10px; }
+        button.copy-btn, button.save-btn {
+            flex: 1;
+            padding: 14px;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14.5px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 7px;
+        }
+        button.copy-btn { background-color: var(--primary-color); }
+        button.copy-btn:hover { background-color: var(--primary-hover); }
+        button.save-btn { background-color: #10b981; }
+        button.save-btn:hover { background-color: #059669; }
+
+        .ai-label { font-size: 13px; color: var(--text-muted); margin: 16px 0 9px; font-weight: 600; }
+        .ai-row { display: flex; gap: 10px; }
+        .ai-btn {
+            flex: 1;
+            padding: 12px;
+            border: 1.5px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--input-bg);
+            color: var(--text-main);
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.18s;
+        }
+        .ai-btn:hover { transform: translateY(-2px); }
+        .ai-btn.gemini:hover { border-color: #4285f4; color: #4285f4; }
+        .ai-btn.chatgpt:hover { border-color: #10a37f; color: #10a37f; }
+        .ai-btn.claude:hover { border-color: #d97757; color: #d97757; }
+
+        /* 히스토리 */
+        .history-section { margin-top: 30px; border-top: 1px solid var(--border-color); padding-top: 20px; }
+        .history-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .history-head .section-title { margin: 0; }
+        .clear-hist {
+            background: none; border: none; color: var(--text-muted);
+            font-size: 12.5px; cursor: pointer; text-decoration: underline;
+        }
+        .history-list { display: flex; flex-direction: column; gap: 8px; }
+        .history-empty { color: var(--text-muted); font-size: 13.5px; text-align: center; padding: 14px 0; }
+        .hist-item {
+            display: flex; align-items: center; gap: 10px;
+            background: var(--chip-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 11px 13px;
+        }
+        .hist-main { flex: 1; min-width: 0; cursor: pointer; }
+        .hist-tag {
+            display: inline-block; font-size: 11px; font-weight: 700;
+            color: var(--primary-color); background: var(--box-bg);
+            padding: 2px 7px; border-radius: 6px; margin-bottom: 4px;
+        }
+        .hist-text {
+            font-size: 13px; color: var(--text-main);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .hist-time { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+        .hist-btn {
+            background: none; border: none; cursor: pointer; font-size: 16px;
+            padding: 4px; color: var(--text-muted); line-height: 1;
+        }
+        .hist-btn.fav.on { color: #f59e0b; }
+        .hist-btn:hover { transform: scale(1.15); }
+
+        #toast {
+            visibility: hidden;
+            min-width: 250px;
+            background-color: #334155;
+            color: #fff;
+            text-align: center;
+            border-radius: 8px;
+            padding: 15px;
+            position: fixed;
+            z-index: 1000;
+            left: 50%;
+            bottom: 30px;
+            transform: translateX(-50%);
+            font-size: 14.5px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+            opacity: 0;
+            transition: opacity 0.3s, bottom 0.3s;
+        }
+        #toast.show { visibility: visible; opacity: 1; bottom: 50px; }
+        #toast.error { background-color: #ef4444; }
+        #toast.success { background-color: #10b981; }
+
+        @media (max-width: 540px) {
+            .options-row { flex-direction: column; gap: 15px; }
+            .container { padding: 24px 18px; }
+            h2 { font-size: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="top-bar">
+        <h2>🪄 올인원 프롬프트 생성기</h2>
+        <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">🌙 다크모드</button>
+    </div>
+    <p class="description">직무만 고르고 대충 적어도 됩니다. 전문가 페르소나·어조·형식·맥락을 <strong>앞뒤로 자동으로 감싸서</strong>,<br>AI(제미나이·ChatGPT·Claude 등)가 찰떡같이 알아듣는 완성형 프롬프트로 바꿔드립니다.</p>
+
+    <p class="section-title">1️⃣ 직무(역할) 선택</p>
+    <div class="role-grid" id="roleGrid"></div>
+
+    <div class="form-group">
+        <label for="userInput" id="inputLabel">2️⃣ 처리할 내용을 입력하세요</label>
+        <textarea id="userInput" placeholder=""></textarea>
+    </div>
+
+    <div class="options-row">
+        <div class="form-group">
+            <label for="toneSelect">🎭 어조 (커뮤니케이션 톤)</label>
+            <select id="toneSelect"></select>
+        </div>
+        <div class="form-group">
+            <label for="formatSelect">📝 출력 포맷 (문서 양식)</label>
+            <select id="formatSelect"></select>
+        </div>
+    </div>
+
+    <details class="advanced">
+        <summary>⚙️ 세부 옵션 (선택) — 분량 · 대상 독자 · 언어 · 필수 포함 내용</summary>
+        <div class="adv-body">
+            <div class="options-row">
+                <div class="form-group">
+                    <label for="lengthSelect">분량</label>
+                    <select id="lengthSelect">
+                        <option value="">기본 (지정 안 함)</option>
+                        <option value="short">간결하게 (핵심만)</option>
+                        <option value="normal">보통 분량</option>
+                        <option value="long">상세하고 깊이 있게</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="langSelect">출력 언어</label>
+                    <select id="langSelect">
+                        <option value="ko">한국어</option>
+                        <option value="en">영어 (English)</option>
+                        <option value="both">한국어 + 영어 병기</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="readerInput">대상 독자 / 받는 사람 (선택)</label>
+                <input type="text" id="readerInput" placeholder="예시: 비전공 신입사원 / 까다로운 팀장님 / 잠재 고객사 담당자">
+            </div>
+            <div class="form-group">
+                <label for="keywordInput">반드시 포함할 핵심 내용·키워드 (선택)</label>
+                <input type="text" id="keywordInput" placeholder="예시: 마감일 6/30, 환불 불가 조항, 경쟁사 대비 강점">
+            </div>
+            <div class="toggle-row">
+                <input type="checkbox" id="autoEnhance" checked>
+                <label for="autoEnhance">🧠 <strong>알아서 보강하기</strong><br><span class="hint">입력이 짧거나 모호해도 AI가 의도를 파악해 빠진 맥락을 채우고, 핵심 정보가 없으면 먼저 확인 질문을 하도록 지시합니다.</span></label>
+            </div>
+        </div>
+    </details>
+
+    <button class="generate-btn" onclick="generatePrompt()">🚀 완성형 프롬프트 생성</button>
+
+    <div class="result-box" id="resultBox">
+        <h3>💡 아래 내용을 복사해서 AI에게 그대로 붙여넣으세요!</h3>
+        <div class="result-content" id="resultContent"></div>
+        <div class="btn-row">
+            <button class="copy-btn" onclick="copyToClipboard()">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                복사하기
+            </button>
+            <button class="save-btn" onclick="saveCurrent()">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+                즐겨찾기 저장
+            </button>
+        </div>
+        <p class="ai-label">🔗 복사하면서 AI로 바로 보내기</p>
+        <div class="ai-row">
+            <button class="ai-btn gemini" onclick="openInAI('gemini')">제미나이</button>
+            <button class="ai-btn chatgpt" onclick="openInAI('chatgpt')">ChatGPT</button>
+            <button class="ai-btn claude" onclick="openInAI('claude')">Claude</button>
+        </div>
+    </div>
+
+    <div class="history-section">
+        <div class="history-head">
+            <p class="section-title">📚 저장한 프롬프트</p>
+            <button class="clear-hist" onclick="clearHistory()">전체 삭제</button>
+        </div>
+        <div class="history-list" id="historyList"></div>
+    </div>
+</div>
+
+<div id="toast"></div>
+<textarea id="hiddenCopyText" style="position: absolute; left: -9999px; top: -9999px;" aria-hidden="true"></textarea>
+
+<script>
+/* =========================================================================
+   직무(역할) 데이터 — 각 직무마다 페르소나 / 어조 / 포맷 / 도메인 가이드 정의
+   ※ 회계·총무, 경영·비즈니스 두 직무는 기존 파일 내용을 그대로 보존했습니다.
+   ========================================================================= */
+const ROLES = {
+    business: {
+        name: "경영·비즈니스", emoji: "📊", accent: "#1e3a8a",
+        persona: "당신은 글로벌 최고 수준의 경영 전략가이자 비즈니스 기획 전문가입니다.",
+        intro: "아래의 [기획/분석 요청 사항]을 꼼꼼히 읽고, [작성 가이드라인]에 맞춰 전문가 수준의 인사이트가 담긴 결과물을 제공해 주세요.",
+        inputLabel: "분석/기획할 핵심 내용을 입력하세요",
+        requestTitle: "기획/분석 요청 사항",
+        placeholder: "예시: 신규 서비스 런칭을 위한 Go-to-Market 전략을 수립하고, 예상되는 리스크와 대응 방안을 정리해줘.",
+        extraGuide: "비즈니스 및 전략 전문 용어(예: KPI, 마켓 셰어, ROI, 리스크 헷지 등)를 상황에 맞게 적절히 활용하되, 논리의 비약 없이 인과관계를 명확히 설명해 주세요.",
+        tones: [
+            { v: "objective", t: "객관적/데이터 기반 (기본)", i: "주관적 의견을 배제하고, 정확한 수치와 데이터, 팩트에 기반하여 객관적이고 전문적인 비즈니스 어조로 작성해 주세요." },
+            { v: "c_level", t: "경영진(C-Level) 보고용", i: "바쁜 C-Level 경영진이 즉각적으로 의사결정을 내릴 수 있도록 미사여구를 배제하고 결론과 핵심 근거 위주로 간결하게 작성해 주세요." },
+            { v: "investor", t: "투자자/이해관계자용", i: "투자자와 주요 이해관계자에게 신뢰감을 줄 수 있도록, 객관적 데이터에 기반하면서도 비즈니스의 장기적인 비전과 성장 가능성이 돋보이는 전문적인 어조로 작성해 주세요." },
+            { v: "consulting", t: "전략 컨설팅 톤 (MECE)", i: "글로벌 탑티어 전략 컨설팅 펌의 컨설턴트처럼 MECE(Mutually Exclusive Collectively Exhaustive) 원칙에 입각하여 누락이나 중복 없이 논리적이고 구조적으로 분석해 주세요." }
+        ],
+        formats: [
+            { v: "report", t: "구조화된 보고서 (기본)", i: "- [형식] 구조화된 비즈니스 기획안/보고서\n- 대주제, 중주제, 소주제로 계층을 명확히 나누고, 가독성을 위해 불릿 포인트와 마크다운 표를 적극적으로 활용해 주세요." },
+            { v: "one_pager", t: "1-Pager 핵심 요약", i: "- [형식] Executive Summary (1-Pager)\n- 전체 내용의 핵심을 파악할 수 있도록 1페이지 분량으로 요약해 주세요.\n- [배경/목적] - [현황/이슈] - [전략방향/해결방안] - [기대효과]의 구조를 따라주세요." },
+            { v: "framework", t: "분석 프레임워크 (SWOT 등)", i: "- [형식] 비즈니스 분석 프레임워크\n- 주어진 상황에 가장 적합한 경영/마케팅 프레임워크(예: SWOT, PEST, 3C, 5 Forces, STP 등)를 명시하고, 해당 프레임워크에 맞추어 내용을 논리적으로 분류해 주세요." },
+            { v: "action_plan", t: "구체적 실행 계획", i: "- [형식] Action Plan (실행 계획)\n- 실무 부서에서 즉시 실행할 수 있는 구체적인 Action Item들을 도출해 주세요.\n- 각 항목별로 예상되는 [우선순위], [소요 기간], [필요 리소스/유관 부서]를 표 형태로 제시해 주세요." }
+        ]
+    },
+
+    accounting: {
+        name: "회계·총무", emoji: "🏢", accent: "#1e40af",
+        persona: "당신은 기업의 자금을 깐깐하게 관리하고 비용 처리를 돕는 10년 차 '회계/총무팀 핵심 실무자'입니다.",
+        intro: "아래의 [업무 요청 상황]을 읽고, [작성 가이드라인]에 맞춰 타 부서 직원이나 경영진에게 전달할 완벽한 결과물을 만들어 주세요.",
+        inputLabel: "처리해야 할 업무 상황이나 내역을 입력하세요",
+        requestTitle: "업무 요청 상황",
+        placeholder: "예시: 영업팀 김대리가 주말에 법인카드로 10만 원을 결제하고 식대로 올렸어. 사내 규정상 휴일 결제는 사전 품의가 없으면 불가하므로 반려하고, 사전 품의서 작성법을 안내하는 메일을 써줘.",
+        extraGuide: "사내 규정, 영수증, 증빙, 법인카드 등 회계 부서에서 자주 쓰는 실무 용어를 자연스럽게 포함해 주세요.",
+        tones: [
+            { v: "firm_polite", t: "단호하지만 정중하게 (반려용)", i: "사내 규정을 근거로 단호하면서도, 타 부서 직원이 기분 상하지 않도록 매우 정중하고 비즈니스 매너를 갖춘 어조로 작성해 주세요." },
+            { v: "clear_easy", t: "쉽고 친절하게 (직원 가이드)", i: "회계나 재무 지식이 없는 일반 직원들도 사내 규정과 전표 처리 절차를 쉽게 이해할 수 있도록 친절하고 명확한 어조로 설명해 주세요." },
+            { v: "report_boss", t: "보고용 전문 어조 (경영진)", i: "재무팀장이나 경영진에게 지출 이슈 사항이나 비용 현황을 보고하기 위해, 핵심과 숫자가 돋보이는 간결하고 전문적인 보고서 어조로 작성해 주세요." },
+            { v: "dry_fact", t: "건조한 사실 위주 (기록용)", i: "객관적인 회계 감사나 내부 기록용이므로, 감정적인 표현이나 인사말을 완전히 배제하고 날짜, 부서명, 계정과목, 금액 등 팩트 위주로 건조하게 작성해 주세요." }
+        ],
+        formats: [
+            { v: "reject_email", t: "지출결의 반려/수정 요청 메일", i: "- [형식] 반려/보완 요청 이메일\n- 제목에 [수정 요청] 또는 [반려 안내]를 명시해 주세요.\n- 1. 반려 사유(위반된 규정), 2. 수정/보완해야 할 사항, 3. 재기안 방법을 명확히 나누어 작성해 주세요." },
+            { v: "policy_guide", t: "사내 경비 규정 공지/안내문", i: "- [형식] 사내 공지사항 / 규정 안내문\n- [공지 목적], [주요 변경/안내 사항], [적용 일시], [문의처] 형식으로 가독성 있게 작성하고 핵심 내용은 굵은 글씨로 강조해 주세요." },
+            { v: "expense_summary", t: "비용 현황 분석/요약 보고서", i: "- [형식] 비용 현황 요약 (보고용)\n- 제출된 지출 내역이나 이슈들을 부서별, 계정과목별로 분류하여 마크다운 표(Table)로 정리하고 하단에 간략한 인사이트를 추가해 주세요." },
+            { v: "accounting_memo", t: "내부 회계 처리 / 전표 적요 메모", i: "- [형식] 전표 적요 / 내부 회계 메모\n- 향후 회계 감사 시 증빙이 될 수 있도록, 해당 지출의 성격과 예외 처리 사유 등을 핵심만 2~3줄 이내로 매우 간결하게 요약해 주세요." }
+        ]
+    },
+
+    hr: {
+        name: "인사·HR", emoji: "🧑‍💼", accent: "#7c3aed",
+        persona: "당신은 직원과 조직 모두를 세심하게 살피는 15년 차 '인사(HR) 전문가'입니다.",
+        intro: "아래의 [업무 요청 상황]을 읽고, [작성 가이드라인]에 맞춰 직원·지원자·경영진에게 전달할 완성도 높은 결과물을 만들어 주세요.",
+        inputLabel: "처리할 인사 업무 내용을 입력하세요",
+        requestTitle: "업무 요청 상황",
+        placeholder: "예시: 하반기 신입 공채 채용 공고를 작성해야 해. 직무는 마케팅이고, 우리 회사의 수평적 문화와 성장 기회를 강조해서 지원하고 싶게 만들어줘.",
+        extraGuide: "근로기준법, 사규, 평가, 온보딩 등 인사 실무 맥락을 고려하되 민감한 개인정보나 표현은 신중하고 공정하게 다뤄 주세요.",
+        tones: [
+            { v: "warm_care", t: "따뜻하고 배려있게 (직원 소통)", i: "직원이 존중받는다고 느낄 수 있도록 따뜻하고 배려 깊은 어조로, 회사의 진심이 전달되게 작성해 주세요." },
+            { v: "formal_official", t: "공식적/규정 기반 (인사 공지)", i: "인사 규정과 절차에 근거하여 오해의 소지가 없도록 공식적이고 명확한 어조로 작성해 주세요." },
+            { v: "objective_eval", t: "객관적 평가 어조 (평가/피드백)", i: "감정을 배제하고 구체적인 사실과 행동(behavior) 근거에 기반하여 공정하고 객관적인 평가 어조로 작성해 주세요." },
+            { v: "confidential", t: "신중하고 민감하게 (노무/면담)", i: "민감한 이슈인 만큼 단정적 표현을 피하고, 당사자를 배려하면서도 회사의 입장을 신중하게 전달하는 어조로 작성해 주세요." }
+        ],
+        formats: [
+            { v: "announcement", t: "사내 인사 공지문", i: "- [형식] 사내 인사 공지\n- [공지 제목], [대상], [주요 내용], [시행 일자], [문의처]를 갖추고 핵심은 굵은 글씨로 강조해 주세요." },
+            { v: "jd", t: "채용 공고 (JD)", i: "- [형식] 채용 공고(Job Description)\n- [포지션 소개], [주요 업무], [자격 요건], [우대 사항], [근무 조건/복지], [전형 절차]로 구분하고, 지원 동기를 자극하는 매력적인 회사 소개를 앞에 배치해 주세요." },
+            { v: "interview_kit", t: "면접 질문 / 평가표", i: "- [형식] 면접 질문지 & 평가표\n- 역량별로 질문을 분류하고, 각 질문의 평가 의도와 5점 척도 평가 기준을 표로 제시해 주세요." },
+            { v: "feedback", t: "평가 피드백 / 면담 기록", i: "- [형식] 성과 피드백 / 면담 기록\n- [잘한 점], [개선이 필요한 점], [구체적 기대 행동/목표]를 사실 기반으로 균형 있게 정리해 주세요." }
+        ]
+    },
+
+    marketing: {
+        name: "마케팅", emoji: "📣", accent: "#db2777",
+        persona: "당신은 브랜드를 성장시키는, 트렌드에 밝은 '마케팅 전략가이자 카피라이터'입니다.",
+        intro: "아래의 [요청 사항]을 읽고, [작성 가이드라인]에 맞춰 타깃 고객의 마음을 움직이는 결과물을 만들어 주세요.",
+        inputLabel: "마케팅/콘텐츠 요청 내용을 입력하세요",
+        requestTitle: "요청 사항",
+        placeholder: "예시: 2030 직장인을 타깃으로 한 신상 콜드브루 커피 제품의 인스타그램 런칭 카피를 만들어줘. 진하고 깔끔한 맛이 강점이야.",
+        extraGuide: "타깃 고객, 후킹(hook), CTA(행동 유도), 전환 관점을 반영하고 일관된 브랜드 톤을 유지해 주세요.",
+        tones: [
+            { v: "catchy", t: "감각적이고 트렌디하게 (SNS)", i: "스크롤을 멈추게 만들 만큼 감각적이고 트렌디하며, 짧고 임팩트 있는 어조로 작성해 주세요." },
+            { v: "persuasive", t: "설득력 있게 (광고/세일즈)", i: "고객의 욕구와 페인포인트를 건드려 구매하고 싶게 만드는, 설득력 강한 세일즈 어조로 작성해 주세요." },
+            { v: "friendly_brand", t: "친근한 브랜드 보이스", i: "고객과 친구처럼 가깝게 소통하는, 따뜻하고 친근한 브랜드 보이스로 작성해 주세요." },
+            { v: "data_driven", t: "데이터 기반 분석 어조", i: "감보다는 지표(전환율, CTR, ROAS 등)에 근거하여 논리적이고 분석적인 어조로 작성해 주세요." }
+        ],
+        formats: [
+            { v: "copy", t: "광고/SNS 카피 세트", i: "- [형식] 카피 세트\n- 메인 헤드라인 1개 + 변형 카피 3~5개 + 해시태그 + CTA 문구를 제안하고, 각 카피의 톤/포인트를 한 줄로 설명해 주세요." },
+            { v: "content_plan", t: "콘텐츠/캠페인 기획안", i: "- [형식] 콘텐츠·캠페인 기획안\n- [목표/KPI], [타깃], [핵심 메시지], [채널별 실행안], [일정]을 표와 불릿으로 정리해 주세요." },
+            { v: "press", t: "보도자료 / 뉴스레터", i: "- [형식] 보도자료/뉴스레터\n- 핵심을 담은 제목과 리드 문단을 앞세우고, 육하원칙에 따라 본문을 구성하며 인용구를 포함해 주세요." },
+            { v: "analysis", t: "마케팅 성과 분석 리포트", i: "- [형식] 성과 분석 리포트\n- 주요 지표를 표로 정리하고, [잘된 점]/[아쉬운 점]/[다음 액션]을 인사이트와 함께 도출해 주세요." }
+        ]
+    },
+
+    sales: {
+        name: "영업", emoji: "🤝", accent: "#ea580c",
+        persona: "당신은 고객의 니즈를 꿰뚫고 계약을 성사시키는 'B2B/B2C 영업 전문가'입니다.",
+        intro: "아래의 [요청 사항]을 읽고, [작성 가이드라인]에 맞춰 고객을 설득하고 신뢰를 얻는 결과물을 만들어 주세요.",
+        inputLabel: "영업 상황/요청 내용을 입력하세요",
+        requestTitle: "요청 사항",
+        placeholder: "예시: 한 달 전 제안서를 보냈는데 회신이 없는 잠재 고객사에게, 부담스럽지 않게 다시 미팅을 제안하는 팔로업 메일을 써줘.",
+        extraGuide: "고객의 페인포인트, 핵심 가치 제안(Value Proposition), 베네핏을 명확히 드러내고 다음 액션을 자연스럽게 유도해 주세요.",
+        tones: [
+            { v: "proposal_pro", t: "전문적인 제안 어조", i: "전문성과 신뢰가 느껴지도록 명확하고 자신감 있는 제안 어조로 작성해 주세요." },
+            { v: "rapport", t: "관계 중심 친근한 어조", i: "장기적 관계를 염두에 두고, 부담스럽지 않게 친근하면서도 예의 있는 어조로 작성해 주세요." },
+            { v: "closing", t: "클로징/설득 집중", i: "고객이 결정을 내리도록, 가치와 혜택을 강조하며 설득에 집중하는 어조로 작성해 주세요." },
+            { v: "followup", t: "정중한 팔로업", i: "재촉하는 인상 없이 정중하게 상기시키고, 다음 단계를 쉽게 밟을 수 있게 안내하는 어조로 작성해 주세요." }
+        ],
+        formats: [
+            { v: "proposal", t: "영업 제안서", i: "- [형식] 영업 제안서\n- [고객 과제], [해결 방안], [기대 효과/ROI], [도입 절차], [가격/조건]을 설득력 있는 흐름으로 구성해 주세요." },
+            { v: "email_outreach", t: "콜드메일 / 아웃리치", i: "- [형식] 콜드메일\n- 열어보게 만드는 제목 + 짧고 가치 중심의 본문 + 명확한 CTA로, 5줄 내외로 간결하게 작성해 주세요." },
+            { v: "quote_explain", t: "견적/단가 설명", i: "- [형식] 견적 안내\n- 항목별 가격을 표로 정리하고, 가격에 담긴 가치와 조건(할인/기간 등)을 고객이 납득하도록 설명해 주세요." },
+            { v: "meeting_note", t: "미팅 노트 / 후속 조치", i: "- [형식] 미팅 노트\n- [논의 내용], [고객 니즈/우려], [합의 사항], [다음 액션 & 담당/기한]을 정리해 주세요." }
+        ]
+    },
+
+    dev: {
+        name: "개발·IT", emoji: "💻", accent: "#0891b2",
+        persona: "당신은 복잡한 문제를 명료하게 정리하는 시니어 '소프트웨어 엔지니어'입니다.",
+        intro: "아래의 [요청 사항]을 읽고, [작성 가이드라인]에 맞춰 정확하고 실무에 바로 쓸 수 있는 결과물을 만들어 주세요.",
+        inputLabel: "기술 요청/문제 상황을 입력하세요",
+        requestTitle: "요청 사항",
+        placeholder: "예시: 로그인 기능에 대한 요구사항 명세를 작성해줘. 이메일 인증과 소셜 로그인을 지원하고, 비밀번호 정책도 포함했으면 해.",
+        extraGuide: "용어를 정확히 사용하고, 모호한 부분은 가정을 명시하며, 필요 시 예시 코드나 단계별 절차를 포함해 주세요.",
+        tones: [
+            { v: "precise_tech", t: "정확한 기술 어조", i: "기술 용어를 정확히 사용하여 군더더기 없이 명료하고 정밀하게 작성해 주세요." },
+            { v: "easy_nontech", t: "비개발자도 이해하기 쉽게", i: "기술 배경이 없는 사람도 이해할 수 있도록 비유와 쉬운 말로 풀어서 설명해 주세요." },
+            { v: "review_strict", t: "깐깐한 코드리뷰 어조", i: "잠재적 버그, 엣지 케이스, 가독성, 성능 관점에서 꼼꼼하게 짚어주되 근거와 개선안을 함께 제시해 주세요." },
+            { v: "doc_neutral", t: "중립적 문서 어조", i: "감정 없이 객관적이고 일관된 문서 어조로 구조적으로 작성해 주세요." }
+        ],
+        formats: [
+            { v: "spec", t: "기술 명세 / 요구사항 정의", i: "- [형식] 요구사항 명세(Spec)\n- [목적], [기능 요구사항], [비기능 요구사항], [제약/가정], [엣지 케이스]로 구분해 명확히 정리해 주세요." },
+            { v: "bug_report", t: "버그 리포트 / 이슈 티켓", i: "- [형식] 버그 리포트\n- [요약], [재현 단계], [기대 결과], [실제 결과], [환경], [우선순위]를 갖춰 작성해 주세요." },
+            { v: "code_review", t: "코드 리뷰 코멘트", i: "- [형식] 코드 리뷰\n- 이슈를 [Blocker]/[Major]/[Minor]/[Nit]로 분류하고, 각 항목에 이유와 개선 제안(가능하면 코드 예시)을 달아 주세요." },
+            { v: "tech_doc", t: "기술 문서 / README", i: "- [형식] 기술 문서\n- [개요], [설치/사용법], [예시], [주의사항]을 마크다운으로 구조화하고 코드 블록을 활용해 주세요." }
+        ]
+    },
+
+    planning: {
+        name: "기획·PM", emoji: "🧩", accent: "#0d9488",
+        persona: "당신은 시장과 사용자, 비즈니스를 연결하는 '서비스 기획자이자 PM'입니다.",
+        intro: "아래의 [요청 사항]을 읽고, [작성 가이드라인]에 맞춰 논리적이고 실행 가능한 결과물을 만들어 주세요.",
+        inputLabel: "기획할 내용을 입력하세요",
+        requestTitle: "요청 사항",
+        placeholder: "예시: 우리 앱에 다크모드 기능을 추가하려고 해. 도입 배경, 사용자 가치, 핵심 요구사항, 성공 지표를 담은 기획안을 만들어줘.",
+        extraGuide: "사용자 가치, 우선순위, 성공 지표(metric)를 고려하여 논리적 흐름이 끊기지 않게 작성해 주세요.",
+        tones: [
+            { v: "logical", t: "논리적/구조적", i: "주장과 근거의 인과관계가 명확하도록 논리적이고 구조적으로 작성해 주세요." },
+            { v: "persuasive_buyin", t: "설득/공감대 형성", i: "이해관계자의 공감과 동의(buy-in)를 끌어내도록 배경과 가치를 설득력 있게 풀어 주세요." },
+            { v: "concise_exec", t: "간결한 보고", i: "의사결정자가 빠르게 파악하도록 결론과 핵심 위주로 간결하게 작성해 주세요." },
+            { v: "collaborative", t: "협업 친화적", i: "유관 부서가 함께 보기 좋게, 역할과 다음 액션이 분명하도록 협업 친화적으로 작성해 주세요." }
+        ],
+        formats: [
+            { v: "proposal_plan", t: "기획안", i: "- [형식] 기획안\n- [배경/문제], [목표], [타깃 사용자], [핵심 기능/해결안], [성공 지표], [일정/리스크]로 구성해 주세요." },
+            { v: "prd", t: "제품 요구사항 문서 (PRD)", i: "- [형식] PRD\n- [개요/목표], [User Story], [기능 요구사항(우선순위 포함)], [화면 흐름], [예외 처리], [성공 지표]로 정리해 주세요." },
+            { v: "roadmap", t: "로드맵 / 마일스톤", i: "- [형식] 로드맵\n- 분기/스프린트별 목표와 산출물을 표로 정리하고, 의존 관계와 마일스톤을 표시해 주세요." },
+            { v: "meeting_agenda", t: "회의 안건 / 회의록", i: "- [형식] 회의 안건/회의록\n- [목적], [안건별 논의 포인트], [결정 사항], [Action Item(담당/기한)]으로 정리해 주세요." }
+        ]
+    },
+
+    cs: {
+        name: "고객지원·CS", emoji: "🎧", accent: "#0284c7",
+        persona: "당신은 고객의 마음을 헤아리며 신뢰를 쌓는 베테랑 '고객 경험(CX) 전문가'입니다.",
+        intro: "아래의 [요청 사항]을 읽고, [작성 가이드라인]에 맞춰 고객이 만족할 수 있는 응대 결과물을 만들어 주세요.",
+        inputLabel: "고객 응대 상황을 입력하세요",
+        requestTitle: "요청 사항",
+        placeholder: "예시: 배송이 3일 지연되어 화가 난 고객에게 보낼 사과 메일을 써줘. 진심으로 사과하되, 보상으로 다음 구매 시 쓸 수 있는 쿠폰을 안내해줘.",
+        extraGuide: "고객의 감정에 먼저 공감하고, 해결 방법과 다음 단계를 명확히 안내하며, 회사의 신뢰를 지키는 표현을 사용해 주세요.",
+        tones: [
+            { v: "empathetic", t: "공감/사과 (클레임 응대)", i: "고객의 불편에 진심으로 공감하고 정중히 사과하며, 책임을 회피하지 않는 따뜻한 어조로 작성해 주세요." },
+            { v: "clear_guide", t: "명확한 안내", i: "고객이 헷갈리지 않도록 절차와 방법을 단계별로 명확하고 친절하게 안내해 주세요." },
+            { v: "firm_polite_cs", t: "정중하지만 단호하게", i: "무리하거나 규정에 어긋난 요구에는 정중하면서도 원칙을 지켜 단호하게 응대해 주세요." },
+            { v: "proactive", t: "선제적/적극적", i: "고객이 묻기 전에 필요한 정보를 먼저 안내하고, 추가 도움을 적극적으로 제안하는 어조로 작성해 주세요." }
+        ],
+        formats: [
+            { v: "reply", t: "고객 문의 답변", i: "- [형식] 고객 응대 답변\n- 인사/공감 → 핵심 답변 → 해결 방법/다음 단계 → 마무리 인사 순으로 친절하게 작성해 주세요." },
+            { v: "apology", t: "사과 / 보상 안내문", i: "- [형식] 사과 및 보상 안내\n- 진심 어린 사과 → 원인 설명 → 재발 방지 → 보상 안내 순으로, 변명처럼 들리지 않게 작성해 주세요." },
+            { v: "faq", t: "FAQ / 도움말", i: "- [형식] FAQ\n- 자주 묻는 질문을 Q&A 형태로 정리하고, 답변은 간결하고 명확하게 작성해 주세요." },
+            { v: "complaint_report", t: "클레임 내부 보고", i: "- [형식] 클레임 내부 보고\n- [고객/접수 경위], [핵심 불만], [응대 내용], [필요한 조치/요청 사항]을 사실 위주로 정리해 주세요." }
+        ]
+    },
+
+    general: {
+        name: "범용", emoji: "✨", accent: "#475569",
+        persona: "당신은 어떤 주제든 핵심을 꿰뚫어 명료하게 정리하는 '만능 전문 비서'입니다.",
+        intro: "아래의 [요청 사항]을 읽고, [작성 가이드라인]에 맞춰 기대 이상으로 완성도 높은 결과물을 만들어 주세요.",
+        inputLabel: "AI에게 시키고 싶은 내용을 입력하세요",
+        requestTitle: "요청 사항",
+        placeholder: "예시: 다음 주 팀 워크숍에서 쓸 아이스브레이킹 게임 5개를 추천하고, 각각 진행 방법을 알려줘.",
+        extraGuide: "전문 용어가 필요하면 적절히 쓰되, 누구나 이해할 수 있도록 명확하고 친절하게 설명해 주세요.",
+        tones: [
+            { v: "pro_neutral", t: "전문적이고 중립적 (기본)", i: "전문적이면서도 치우침 없이 객관적이고 명료한 어조로 작성해 주세요." },
+            { v: "friendly", t: "친근하고 부드럽게", i: "딱딱하지 않게, 친근하고 부드러운 대화체로 작성해 주세요." },
+            { v: "concise", t: "간결하고 핵심만", i: "불필요한 설명을 덜어내고 핵심만 간결하게 작성해 주세요." },
+            { v: "creative", t: "창의적이고 풍부하게", i: "틀에 박히지 않은 창의적인 아이디어와 풍부한 표현으로 작성해 주세요." }
+        ],
+        formats: [
+            { v: "auto", t: "자동 (내용에 맞게)", i: "- [형식] 내용에 가장 적합한 형식을 스스로 판단하여, 가독성 좋게 구성해 주세요." },
+            { v: "email", t: "이메일", i: "- [형식] 이메일\n- 적절한 제목, 인사말, 본문, 맺음말을 갖춰 작성해 주세요." },
+            { v: "report", t: "보고서/문서", i: "- [형식] 문서/보고서\n- 제목과 소제목으로 계층을 나누고, 불릿과 표를 활용해 구조적으로 작성해 주세요." },
+            { v: "bullet", t: "핵심 요약 (불릿)", i: "- [형식] 핵심 요약\n- 불릿 포인트로 핵심만 일목요연하게 정리해 주세요." }
+        ]
+    }
+};
+
+const ROLE_ORDER = ["business", "accounting", "hr", "marketing", "sales", "dev", "planning", "cs", "general"];
+let currentRole = "business";
+const HIST_KEY = "promptWizardHistory_v1";
+const THEME_KEY = "promptWizardTheme";
+
+/* ---------- 초기화 ---------- */
+function init() {
+    // 테마 복원
+    const savedTheme = localStorage.getItem(THEME_KEY);
+    if (savedTheme === "dark") applyTheme("dark");
+
+    // 직무 버튼 렌더
+    const grid = document.getElementById("roleGrid");
+    grid.innerHTML = "";
+    ROLE_ORDER.forEach(key => {
+        const r = ROLES[key];
+        const btn = document.createElement("button");
+        btn.className = "role-btn" + (key === currentRole ? " active" : "");
+        btn.dataset.role = key;
+        btn.innerHTML = `<span class="emoji">${r.emoji}</span>${r.name}`;
+        btn.onclick = () => selectRole(key);
+        grid.appendChild(btn);
+    });
+
+    selectRole(currentRole);
+    renderHistory();
+}
+
+function selectRole(key) {
+    currentRole = key;
+    const r = ROLES[key];
+
+    // 버튼 활성화 + 테마 색상
+    document.querySelectorAll(".role-btn").forEach(b => {
+        b.classList.toggle("active", b.dataset.role === key);
+    });
+    document.documentElement.style.setProperty("--primary-color", r.accent);
+
+    // 라벨/placeholder
+    document.getElementById("inputLabel").textContent = "2️⃣ " + r.inputLabel;
+    document.getElementById("userInput").placeholder = r.placeholder;
+
+    // 어조/포맷 동적 채우기
+    fillSelect("toneSelect", r.tones);
+    fillSelect("formatSelect", r.formats);
+}
+
+function fillSelect(id, items) {
+    const sel = document.getElementById(id);
+    sel.innerHTML = "";
+    items.forEach(o => {
+        const opt = document.createElement("option");
+        opt.value = o.v;
+        opt.textContent = o.t;
+        sel.appendChild(opt);
+    });
+}
+
+/* ---------- 프롬프트 생성 ---------- */
+function generatePrompt() {
+    const userInput = document.getElementById("userInput").value.trim();
+    if (!userInput) {
+        showMessage("처리할 내용을 먼저 입력해 주세요!", "error");
+        document.getElementById("userInput").focus();
+        return;
+    }
+
+    const r = ROLES[currentRole];
+    const toneI = r.tones.find(t => t.v === document.getElementById("toneSelect").value).i;
+    const formatI = r.formats.find(f => f.v === document.getElementById("formatSelect").value).i;
+
+    // 세부 옵션
+    const len = document.getElementById("lengthSelect").value;
+    const lang = document.getElementById("langSelect").value;
+    const reader = document.getElementById("readerInput").value.trim();
+    const keywords = document.getElementById("keywordInput").value.trim();
+    const autoEnhance = document.getElementById("autoEnhance").checked;
+
+    // 가이드라인 번호 누적
+    const guides = [];
+    guides.push(toneI);
+    guides.push("아래의 형식을 반드시 지켜서 출력해 주세요.\n" + formatI);
+    guides.push(r.extraGuide);
+
+    if (len === "short") guides.push("분량은 핵심만 담아 간결하게 작성해 주세요.");
+    else if (len === "normal") guides.push("너무 길지도 짧지도 않은 적당한 분량으로 작성해 주세요.");
+    else if (len === "long") guides.push("충분히 상세하고 깊이 있게, 빠짐없이 작성해 주세요.");
+
+    if (reader) guides.push(`이 글의 주 독자는 '${reader}'입니다. 그들의 눈높이와 입장에 맞춰 작성해 주세요.`);
+    if (keywords) guides.push(`다음 핵심 내용·키워드를 반드시 자연스럽게 포함해 주세요: ${keywords}`);
+
+    if (lang === "en") guides.push("최종 결과물은 자연스러운 영어(English)로 작성해 주세요.");
+    else if (lang === "both") guides.push("최종 결과물은 한국어와 영어를 함께(병기) 작성해 주세요.");
+
+    if (autoEnhance) {
+        guides.push("위 요청이 다소 짧거나 모호하더라도, 전문가의 관점에서 사용자의 핵심 의도를 정확히 파악하고 빠진 맥락을 합리적으로 보완하여 완성도 높은 결과물을 만들어 주세요. 다만 결과의 품질을 크게 좌우하는 핵심 정보(예: 금액·기한·대상·목적 등)가 빠져 있다면, 곧바로 작성하기보다 꼭 필요한 확인 질문 1~3개를 먼저 제시해 주세요.");
+    }
+
+    const guideText = guides.map((g, idx) => `${idx + 1}. ${g}`).join("\n");
+
+    const prompt = `${r.persona} ${r.intro}
+
+[${r.requestTitle}]
+${userInput}
+
+[작성 가이드라인]
+${guideText}`;
+
+    document.getElementById("resultContent").innerText = prompt;
+    document.getElementById("resultBox").style.display = "block";
+    document.getElementById("resultBox").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+/* ---------- 복사 ---------- */
+function copyToClipboard() {
+    const text = document.getElementById("resultContent").innerText;
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text)
+            .then(() => showMessage("복사 완료! AI에 붙여넣기(Ctrl+V) 하세요.", "success"))
+            .catch(() => legacyCopy(text));
+    } else {
+        legacyCopy(text);
+    }
+}
+function legacyCopy(text) {
+    const ta = document.getElementById("hiddenCopyText");
+    ta.value = text;
+    ta.select();
+    ta.setSelectionRange(0, 99999);
+    try {
+        document.execCommand("copy")
+            ? showMessage("복사 완료! AI에 붙여넣기(Ctrl+V) 하세요.", "success")
+            : showMessage("복사에 실패했습니다. 직접 드래그해 주세요.", "error");
+    } catch (e) {
+        showMessage("복사를 지원하지 않는 환경입니다.", "error");
+    }
+    window.getSelection().removeAllRanges();
+}
+
+/* ---------- AI 바로가기 ---------- */
+function openInAI(service) {
+    const text = document.getElementById("resultContent").innerText;
+    if (!text) { showMessage("먼저 프롬프트를 생성해 주세요!", "error"); return; }
+
+    // URL 자동 입력(프리필)이 안 되더라도 붙여넣을 수 있게 항상 복사부터
+    const copyThenOpen = (url) => {
+        const open = () => window.open(url, "_blank", "noopener");
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(text).then(open).catch(() => { legacyCopy(text); open(); });
+        } else {
+            legacyCopy(text);
+            open();
+        }
+    };
+
+    // q 파라미터 프리필은 길이가 짧을 때만 시도(너무 길면 잘리므로 사이트만 열고 붙여넣기)
+    const enc = encodeURIComponent(text);
+    const canPrefill = enc.length < 1800;
+
+    let url;
+    switch (service) {
+        case "chatgpt":
+            url = canPrefill ? "https://chatgpt.com/?q=" + enc : "https://chatgpt.com/";
+            break;
+        case "claude":
+            url = canPrefill ? "https://claude.ai/new?q=" + enc : "https://claude.ai/new";
+            break;
+        case "gemini":
+        default:
+            url = "https://gemini.google.com/app"; // 제미나이는 자동 입력 미지원 → 복사 후 붙여넣기
+            break;
+    }
+
+    copyThenOpen(url);
+    showMessage(
+        (service === "gemini" || !canPrefill)
+            ? "복사 완료! 열린 창에 붙여넣기(Ctrl+V) 하세요."
+            : "복사 완료! 자동 입력이 안 되면 붙여넣기(Ctrl+V) 하세요.",
+        "success"
+    );
+}
+
+/* ---------- 히스토리 (localStorage) ---------- */
+function loadHistory() {
+    try { return JSON.parse(localStorage.getItem(HIST_KEY)) || []; }
+    catch (e) { return []; }
+}
+function saveHistory(list) {
+    localStorage.setItem(HIST_KEY, JSON.stringify(list));
+}
+
+function saveCurrent() {
+    const text = document.getElementById("resultContent").innerText;
+    if (!text) return;
+    const list = loadHistory();
+    list.unshift({
+        id: Date.now(),
+        role: currentRole,
+        roleName: ROLES[currentRole].name,
+        accent: ROLES[currentRole].accent,
+        text: text,
+        fav: false,
+        time: new Date().toLocaleString("ko-KR", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })
+    });
+    // 즐겨찾기는 보존, 일반 기록은 최근 30개까지
+    const favs = list.filter(x => x.fav);
+    const normals = list.filter(x => !x.fav).slice(0, 30);
+    saveHistory([...favs, ...normals].sort((a, b) => b.id - a.id));
+    renderHistory();
+    showMessage("저장했습니다! 아래 목록에서 다시 불러올 수 있어요.", "success");
+}
+
+function renderHistory() {
+    const list = loadHistory();
+    const box = document.getElementById("historyList");
+    if (!list.length) {
+        box.innerHTML = '<div class="history-empty">아직 저장한 프롬프트가 없습니다. 생성 후 ⭐ 즐겨찾기 저장을 눌러보세요.</div>';
+        return;
+    }
+    // 즐겨찾기 먼저
+    const sorted = [...list].sort((a, b) => (b.fav - a.fav) || (b.id - a.id));
+    box.innerHTML = "";
+    sorted.forEach(item => {
+        const preview = item.text.replace(/\n/g, " ").slice(0, 60);
+        const div = document.createElement("div");
+        div.className = "hist-item";
+        div.innerHTML = `
+            <button class="hist-btn fav ${item.fav ? "on" : ""}" title="즐겨찾기">${item.fav ? "★" : "☆"}</button>
+            <div class="hist-main">
+                <span class="hist-tag" style="color:${item.accent || "var(--primary-color)"}">${item.roleName}</span>
+                <div class="hist-text">${escapeHtml(preview)}…</div>
+                <div class="hist-time">${item.time}</div>
+            </div>
+            <button class="hist-btn del" title="삭제">🗑️</button>`;
+        div.querySelector(".fav").onclick = (e) => { e.stopPropagation(); toggleFav(item.id); };
+        div.querySelector(".del").onclick = (e) => { e.stopPropagation(); deleteHist(item.id); };
+        div.querySelector(".hist-main").onclick = () => loadHistItem(item.id);
+        box.appendChild(div);
+    });
+}
+
+function loadHistItem(id) {
+    const item = loadHistory().find(x => x.id === id);
+    if (!item) return;
+    document.getElementById("resultContent").innerText = item.text;
+    document.getElementById("resultBox").style.display = "block";
+    document.getElementById("resultBox").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function toggleFav(id) {
+    const list = loadHistory();
+    const item = list.find(x => x.id === id);
+    if (item) item.fav = !item.fav;
+    saveHistory(list);
+    renderHistory();
+}
+
+function deleteHist(id) {
+    saveHistory(loadHistory().filter(x => x.id !== id));
+    renderHistory();
+}
+
+function clearHistory() {
+    if (!loadHistory().length) return;
+    if (confirm("저장한 프롬프트를 모두 삭제할까요? (즐겨찾기 포함)")) {
+        localStorage.removeItem(HIST_KEY);
+        renderHistory();
+        showMessage("전체 삭제했습니다.", "success");
+    }
+}
+
+/* ---------- 테마 ---------- */
+function toggleTheme() {
+    const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+    applyTheme(isDark ? "light" : "dark");
+}
+function applyTheme(mode) {
+    if (mode === "dark") {
+        document.documentElement.setAttribute("data-theme", "dark");
+        document.getElementById("themeToggle").textContent = "☀️ 라이트모드";
+        localStorage.setItem(THEME_KEY, "dark");
+    } else {
+        document.documentElement.removeAttribute("data-theme");
+        document.getElementById("themeToggle").textContent = "🌙 다크모드";
+        localStorage.setItem(THEME_KEY, "light");
+    }
+}
+
+/* ---------- 유틸 ---------- */
+function showMessage(msg, type = "success") {
+    const toast = document.getElementById("toast");
+    toast.textContent = msg;
+    toast.className = "show " + type;
+    setTimeout(() => { toast.className = toast.className.replace("show", "").trim(); }, 3000);
+}
+function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+init();
+</script>
+
+</body>
+</html>
